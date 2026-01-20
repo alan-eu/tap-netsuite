@@ -215,7 +215,21 @@ class NetsuiteSearchPaginatedStream(NetsuiteStream):
             search_date = self.get_client_type("SearchDateField")
             search_date = search_date(searchValue=start_date, operator="onOrAfter")
             setattr(search_type, rk, search_date)
-        if getattr(search_type, "recordType", None):
+
+        # FIX: For transaction streams using TransactionSearchBasic, filter by
+        # transaction type using SearchEnumMultiSelectField on the 'type' field.
+        # The original code used SearchStringField on 'recordType' which doesn't
+        # work for transactions - it returns ALL transaction types instead of
+        # just the requested one (e.g., Invoice, VendorBill, PurchaseOrder).
+        # See: https://github.com/alan-eu/tap-netsuite for details.
+        if search_type_name == "TransactionSearchBasic" and self.name in CUSTOM_SEARCH_FIELDS.get("TransactionSearchBasic", []):
+            # Convert stream name to NetSuite transaction type enum value
+            # e.g., "Invoice" -> "_invoice", "VendorBill" -> "_vendorBill"
+            type_enum_value = "_" + self.name[0].lower() + self.name[1:]
+            search_enum = self.get_client_type("SearchEnumMultiSelectField")
+            search_type.type = search_enum(searchValue=[type_enum_value], operator="anyOf")
+        elif getattr(search_type, "recordType", None):
+            # Original logic for non-transaction streams
             search_string = self.get_client_type("SearchStringField")
             search_type.recordType = search_string(
                 searchValue=self.name, operator="contains"

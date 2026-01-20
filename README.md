@@ -4,6 +4,30 @@
 
 Built with the [Meltano Tap SDK](https://sdk.meltano.com) for Singer Taps.
 
+## Alan Fork
+
+This is Alan's fork of [sehnem/tap-netsuite](https://github.com/sehnem/tap-netsuite) with a critical bug fix for transaction stream filtering.
+
+### Bug Fix: Transaction Type Filtering
+
+The original tap had a bug where selecting any transaction type stream (Invoice, VendorBill, PurchaseOrder, etc.) would return **ALL** transactions instead of just the requested type.
+
+**Root Cause**: The tap used `SearchStringField` on the `recordType` field for transaction searches, but NetSuite's `TransactionSearchBasic` requires using `SearchEnumMultiSelectField` on the `type` field to filter by transaction type.
+
+**Fix**: Modified `client.py` to detect transaction streams and use the correct search field type:
+- For transaction streams: Uses `SearchEnumMultiSelectField` on `type` field with enum values like `_invoice`, `_vendorBill`, `_purchaseOrder`
+- For other streams: Uses the original `SearchStringField` on `recordType`
+
+### Installation (Alan Fork)
+
+```bash
+pipx install git+https://github.com/alan-eu/tap-netsuite
+```
+
+---
+
+## Original Documentation
+
 ## Installation
 
 ```bash
